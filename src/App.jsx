@@ -128,10 +128,10 @@ const App = () => {
     const savings = transactions.filter(t => t.type === 'savings').reduce((sum, t) => sum + t.amount, 0);
     return { income, outcome, savings };
   };
-
+  
   const calculateTotalBalance = () => {
-    const { income, outcome, savings } = calculateTotals(transactions);
-    return income - outcome + savings;
+    const { income, outcome,savings } = calculateTotals(transactions); // Hanya ambil income dan outcome
+    return income - outcome - savings; // Total uang sekarang = pemasukan - pengeluaran
   };
 
   const generatePDF = () => {
@@ -265,7 +265,7 @@ const App = () => {
         </Typography>
 
         {/* Kotak Total */}
-        <section className="p-4 mb-6 bg-blue-100 rounded-lg shadow-sm mt-5 border border-green-300">
+        <section className="p-4 mb-6 bg-blue-50 rounded-lg shadow-sm mt-5 border border-blue-300">
           <Typography variant="h6" className="font-semibold text-gray-800">
             Total Uang Sekarang: {formatCurrency(calculateTotalBalance())}
           </Typography>
@@ -276,7 +276,7 @@ const App = () => {
             <Button className='w-full' variant="contained" color="secondary" onClick={() => setOpenDeleteMonthDialog(true)} style={{ backgroundColor: '#f44336', color: '#fff' }}>
               Hapus Laporan Bulan Ini
             </Button>
-            <Button variant="contained" color="secondary" onClick={generatePDF} className="w-full">Cetak PDF</Button>
+            <Button variant="contained" color="primary" onClick={generatePDF} className="w-full">Cetak PDF</Button>
           </section>
         </section>
 
@@ -364,7 +364,7 @@ const App = () => {
       {/* Dialog Edit */}
       <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)}>
         <DialogTitle>Edit Transaksi</DialogTitle>
-        <DialogContent style={{ padding: '20px' }} className='my-5 flex flex-col gap-3 w-96'>
+        <DialogContent style={{ padding: '20px' }} className='my-5 flex flex-col gap-3 w-full'>
           <TextField
             label="Tanggal"
             type="date"
