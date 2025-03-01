@@ -3,8 +3,8 @@ import {
   TextField, Button, Typography, Paper, Container, Grid, Select, MenuItem, InputLabel, FormControl,
   Dialog, DialogActions, DialogContent, DialogTitle, Snackbar, Alert
 } from '@mui/material';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const formatCurrencyInput = (value) => {
   const numericValue = value.replace(/[^0-9]/g, '');
@@ -137,20 +137,25 @@ const App = () => {
   const generatePDF = () => {
     const doc = new jsPDF();
     const groupedTransactions = groupTransactionsByDate();
-
+    const weeklyTotals = calculateWeeklyTotals(); // Ambil ringkasan mingguan
+  
+    console.log(groupedTransactions); // Debugging: Cek isi groupedTransactions
+    console.log(weeklyTotals); // Debugging: Cek ringkasan mingguan
+  
     // Jika tidak ada transaksi, buat PDF kosong
     if (Object.keys(groupedTransactions).length === 0) {
       doc.text("Tidak ada transaksi untuk dicetak.", 14, 20);
       doc.save(`laporan-keuangan-${currentMonth}.pdf`);
       return;
     }
-
+  
     let startY = 20;
-
+  
+    // Cetak transaksi harian
     Object.keys(groupedTransactions).forEach((date) => {
       const transactions = groupedTransactions[date];
       if (!transactions || transactions.length === 0) return; // Skip jika tidak ada transaksi
-
+  
       const headers = [['Tanggal', 'Jenis', 'Deskripsi', 'Jumlah']];
       const data = transactions.map((t) => [
         formatDate(t.date),
@@ -158,12 +163,12 @@ const App = () => {
         t.description,
         formatCurrency(t.amount),
       ]);
-
+  
       doc.setFontSize(14);
       doc.text(`Tanggal: ${formatDate(date)}`, 14, startY);
       startY += 10;
-
-      doc.autoTable({
+  
+      autoTable(doc, {
         startY,
         head: headers,
         body: data,
@@ -171,7 +176,7 @@ const App = () => {
         styles: { fontSize: 10, cellPadding: 3 },
         headStyles: { fillColor: [22, 160, 133] },
       });
-
+  
       const { income, outcome, savings } = calculateTotals(transactions);
       startY = doc.lastAutoTable.finalY + 10;
       doc.setFontSize(12);
@@ -184,7 +189,47 @@ const App = () => {
       doc.text(`Sisa Uang: ${formatCurrency(income - outcome + savings)}`, 14, startY);
       startY += 20;
     });
-
+  
+    // Cetak ringkasan mingguan
+    if (Object.keys(weeklyTotals).length > 0) {
+      doc.addPage(); // Tambahkan halaman baru untuk ringkasan mingguan
+      startY = 20;
+  
+      doc.setFontSize(16);
+      doc.text(`Ringkasan Mingguan - ${currentMonth}`, 14, startY);
+      startY += 10;
+  
+      Object.keys(weeklyTotals).forEach((weekKey, index) => {
+        const { income, outcome, savings } = weeklyTotals[weekKey];
+  
+        doc.setFontSize(14);
+        doc.text(`Minggu ke-${index + 1}`, 14, startY);
+        startY += 10;
+  
+        const headers = [['Jenis', 'Total']];
+        const data = [
+          ['Pemasukan', formatCurrency(income)],
+          ['Pengeluaran', formatCurrency(outcome)],
+          ['Tabungan', formatCurrency(savings)],
+        ];
+  
+        autoTable(doc, {
+          startY,
+          head: headers,
+          body: data,
+          theme: 'grid',
+          styles: { fontSize: 10, cellPadding: 3 },
+          headStyles: { fillColor: [22, 160, 133] },
+        });
+  
+        startY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(12);
+        doc.text(`Sisa Uang: ${formatCurrency(income - outcome + savings)}`, 14, startY);
+        startY += 20;
+      });
+    }
+  
+    // Simpan PDF
     doc.save(`laporan-keuangan-${currentMonth}.pdf`);
   };
 
@@ -241,7 +286,7 @@ const App = () => {
             <Typography variant="h5" className="mt-6 pb-2 text-center font-bold text-green-600">
               Ringkasan Mingguan
             </Typography>
-            <section className='grid grid-cols-2 gap-2'>
+            <section className='grid grid-cols-1 gap-2'>
               {Object.keys(weeklyTotals).map((weekKey, index) => (
                 <Paper key={weekKey} className="p-4 mb-6 rounded-lg shadow-sm border border-blue-300">
                   <Typography variant="h6" className="font-semibold text-gray-800">
